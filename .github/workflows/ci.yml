@@ -1,0 +1,102 @@
+name: Integrity
+
+# The README tells a reader how to verify this corpus. Nothing ran it.
+#
+# A seal that is only documented is the same class of mistake the README warns
+# about for hand-typed hashes: if the seal and the corpus can disagree without
+# anyone noticing, the seal is decoration. So the published verification
+# procedure runs here, on every push, exactly as a reader would run it.
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  integrity:
+    name: Hashes and corpus consistency
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # Verbatim the command the README gives a reader.
+      - name: Every published hash still matches its file
+        run: |
+          grep -E '^    [0-9a-f]{64}  ' CHECKSUMS.md | sed 's/^ *//' | sha256sum -c
+
+      - name: The corpus agrees with itself and with the case files
+        run: |
+          python3 - <<'PY'
+          import json, os, sys
+
+          d   = json.load(open('corpus.json', encoding='utf-8'))
+          adj = d['org_adjudicated_cases']
+          na  = d['not_adjudicable_cases']
+          c   = d['counts']
+          errs = []
+
+          # Counts are published in the README and quoted by anyone citing this.
+          if c['org_adjudicated'] != len(adj):
+              errs.append('counts.org_adjudicated=%d, list holds %d' % (c['org_adjudicated'], len(adj)))
+          if c['not_adjudicable'] != len(na):
+              errs.append('counts.not_adjudicable=%d, list holds %d' % (c['not_adjudicable'], len(na)))
+          if c['total'] != len(adj) + len(na):
+              errs.append('counts.total=%d, lists sum to %d' % (c['total'], len(adj) + len(na)))
+
+          # A case referenced but absent is a corpus that cannot be reproduced.
+          refs = [x['source_file'] for x in adj + na]
+          missing = [p for p in refs if not os.path.exists(p)]
+          if missing:
+              errs.append('referenced but absent: %s' % ', '.join(missing))
+
+          # A case present but unreferenced is a file nobody scores — and the
+          # kind of thing that survives a rename.
+          on_disk = {('cases/' + f) for f in os.listdir('cases')}
+          orphans = sorted(on_disk - set(refs))
+          if orphans:
+              errs.append('present but unreferenced: %s' % ', '.join(orphans))
+
+          ids = [x['id'] for x in adj + na]
+          dupes = sorted({i for i in ids if ids.count(i) > 1})
+          if dupes:
+              errs.append('duplicate ids: %s' % ', '.join(dupes))
+
+          # label_provenance is described in the README as the benchmark's real
+          # quality metric. An unknown value there silently weakens a claim.
+          allowed = {'platform-doc', 'reasoned'}
+          for x in adj + na:
+              p = x.get('label_provenance', '')
+              if not (p.startswith('experiment:') or p in allowed):
+                  errs.append('%s: unrecognised label_provenance %r' % (x['id'], p))
+
+          print('%d cases: %d adjudicated, %d not adjudicable, %d ids, all files present.'
+                % (c['total'], len(adj), len(na), len(set(ids))))
+          if errs:
+              for e in errs:
+                  print('  FAIL ' + e)
+              sys.exit('corpus is inconsistent')
+          PY
+
+      # The README quotes a provenance distribution. If the corpus moves and the
+      # prose does not, the prose is the stale copy.
+      - name: The provenance distribution in the README matches the corpus
+        run: |
+          python3 - <<'PY'
+          import json, re, sys, collections
+
+          d = json.load(open('corpus.json', encoding='utf-8'))
+          cases = d['org_adjudicated_cases'] + d['not_adjudicable_cases']
+          kind = lambda p: 'experiment' if p.startswith('experiment:') else p
+          actual = collections.Counter(kind(x['label_provenance']) for x in cases)
+
+          readme = open('README.md', encoding='utf-8').read()
+          m = re.search(r'\*\*(\d+) experiment .*?(\d+) platform-doc.*?(\d+)\s*\n?reasoned\*\*', readme, re.S)
+          if not m:
+              sys.exit('could not find the provenance distribution sentence in README.md')
+          claimed = dict(zip(('experiment', 'platform-doc', 'reasoned'), map(int, m.groups())))
+
+          for k in claimed:
+              print('  %-13s README says %d, corpus has %d' % (k, claimed[k], actual[k]))
+          if any(claimed[k] != actual[k] for k in claimed):
+              sys.exit('README provenance distribution does not match corpus.json')
+          PY

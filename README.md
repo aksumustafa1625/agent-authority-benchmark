@@ -149,6 +149,17 @@ Counting them as gaps would overstate what is missing. Counting them as measured
 would overstate what is proven. So they are published, labelled, and excluded from
 the adjudicated set.
 
+## Decisions
+
+The methodology is recorded as five ADRs in [`docs/adr/`](docs/adr/): why the
+oracle is a live org, why provenance is published per case, why seven cases carry
+no verdict, why the integrity seal is generated rather than typed, and why a
+wrong published value gets an errata entry instead of a quiet fix.
+
+Practical guidance for submitting a case is in
+[CONTRIBUTING.md](CONTRIBUTING.md); what this repository does and does not
+contain is in [SECURITY.md](SECURITY.md).
+
 ## What this benchmark is not
 
 - **Not a claim that any particular tool is wrong.** It is a set of measured cases.
