@@ -1,5 +1,9 @@
 # Agent Authority Benchmark
 
+*Does the Apex behind your **Agentforce** agent run in **user mode**? At **API version 67**
+Salesforce changed the default — and whether a given class sits on the old side or the new
+one decides what your agent can read past its running user. These 28 cases measure that.*
+
 **Version 1.1 (2026-08-19).** *v1.0 carried a defect in its scoring field — see
 [Errata](#errata) before comparing against a copy you already hold.*
 
@@ -8,14 +12,6 @@ org — not by an opinion, and not by mine.**
 
 If you build or review static analysis for Salesforce, this is a scoring surface you
 can use without trusting anything I say.
-
-> **How this was built.**
->
-> I used Claude to build this repository, the way an engineer today uses an IDE — I would rather say it first than have it asked. The model wrote code; I set the structure, and every decision went through me.
->
-> So the question worth asking is not *whether* AI wrote it, but **who decided and who verified.** That record is in [`docs/adr/`](docs/adr/): **5 architecture decision records**, each naming the constraint, the choice, the alternatives rejected, and what rejecting them cost. A model does not turn down three options and price the fourth. The [Errata](#errata) belongs to that record too: I published a defect in my own scoring field, affecting 5 of 21 cases, rather than correcting it quietly.
->
-> **What this is not:** a demonstration, not a production system with real users. Built alone, so no colleague reviewed it. Every number is mine — please run them yourself.
 
 ---
 
@@ -157,17 +153,6 @@ Counting them as gaps would overstate what is missing. Counting them as measured
 would overstate what is proven. So they are published, labelled, and excluded from
 the adjudicated set.
 
-## Decisions
-
-The methodology is recorded as five ADRs in [`docs/adr/`](docs/adr/): why the
-oracle is a live org, why provenance is published per case, why seven cases carry
-no verdict, why the integrity seal is generated rather than typed, and why a
-wrong published value gets an errata entry instead of a quiet fix.
-
-Practical guidance for submitting a case is in
-[CONTRIBUTING.md](CONTRIBUTING.md); what this repository does and does not
-contain is in [SECURITY.md](SECURITY.md).
-
 ## What this benchmark is not
 
 - **Not a claim that any particular tool is wrong.** It is a set of measured cases.
@@ -261,7 +246,8 @@ a later release, that is a finding and I want to hear about it.
 ## Licence
 
 Cases and corpus data: **CC BY 4.0** — use, adapt and redistribute with attribution.
-The full legal text is in [`LICENSE`](LICENSE); SPDX identifier `CC-BY-4.0`.
+The full legal text is in [`LICENSE`](LICENSE) and the attribution note is in
+[`NOTICE`](NOTICE); SPDX identifier `CC-BY-4.0`.
 
 Run your own analyzer against this corpus and publish the score — that is what it
 is for, and no permission is needed. Attribution, if you want a form to copy:
